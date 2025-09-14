@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airdrop Mining App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script> <!-- TELEGRAM WEB APP SCRIPT'İNİ EKLE -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0F172A; /* Slate 900 */
+            color: #F8FAFC; /* Slate 50 */
+            overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .main-container {
+            background: #1E293B; /* Slate 800 */
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(30, 41, 59, 0.6); /* Slate 800 with opacity */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(51, 65, 85, 0.5); /* Slate 700 with opacity */
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, #8B5CF6, #EC4899);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+        }
+        .btn-primary:disabled {
+            background: #475569; /* Slate 600 */
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .nav-item.active {
+            color: #A78BFA; /* Violet 400 */
+        }
+        .task-completed {
+            background-color: #16A34A; /* Green 600 */
+            border-color: #16A34A;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.7);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 20px 10px rgba(167, 139, 250, 0);
+            }
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .coin-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+        /* Ekran geçişleri için */
+        .screen { display: none; }
+        .screen.active { display: flex; }
+    </style>
+</head>
+<body class="overscroll-none">
+
+    <!-- Login ve Register ekranları artık varsayılan olarak gösterilmeyecek -->
+    <!-- Onları bir fallback olarak tutabiliriz veya silebiliriz. Şimdilik burada kalsın. -->
+    <div id="login-screen" class="screen min-h-screen w-full flex-col justify-center items-center p-6 bg-slate-900">
+        <!-- ... login içeriği ... -->
+    </div>
+    <div id="register-screen" class="screen min-h-screen w-full flex-col justify-center items-center p-6 bg-slate-900">
+        <!-- ... register içeriği ... -->
+    </div>
+    
+    <!-- Main App Screen (Varsayılan olarak bu ekran gösterilecek) -->
+    <div id="main-app-screen" class="screen active flex-col min-h-screen w-full main-container">
+        <!-- Header -->
+        <header class="p-4 glass-effect sticky top-0 z-10">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p id="display-username" class="font-bold text-lg">Kullanıcı Adı</p>
+                    <p class="text-xs text-slate-400">Telegram: <span id="display-telegram-user">@telegramuser</span></p>
+                </div>
+                <div class="text-right">
+                    <p class="font-bold text-2xl text-amber-400"><span id="total-points">0.0000</span></p>
+                    <p class="text-xs text-slate-400">Toplam Puan</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content (Tabs) -->
+        <main class="flex-grow p-4 pb-24">
+            <!-- Mining Tab -->
+            <div id="mining-tab" class="tab-content active flex-col items-center justify-center text-center pt-8">
+                <div class="coin-animation w-48 h-48 bg-gradient-to-br from-amber-300 to-amber-500 rounded-full flex items-center justify-center shadow-lg mb-8">
+                    <i data-lucide="gem" class="w-24 h-24 text-white"></i>
+                </div>
+                <p class="text-slate-400">Mevcut Kazanç</p>
+                <h2 id="live-earning" class="text-5xl font-bold my-2">0.0000</h2>
+                <div id="timer-container" class="my-4">
+                    <p class="text-slate-300">Kalan Süre</p>
+                    <p id="mining-timer" class="text-2xl font-semibold text-violet-400">24:00:00</p>
+                </div>
+                <button id="mining-button" class="w-full max-w-xs btn-primary text-white font-bold py-4 px-4 rounded-full mt-6 text-lg pulse-animation">
+                    Kazımı Başlat
+                </button>
+                <div id="task-warning" class="hidden mt-4 text-red-400 text-sm">
+                    Kazımı başlatmak için tüm görevleri tamamlamalısınız.
+                </div>
+            </div>
+
+            <!-- Tasks Tab -->
+            <div id="tasks-tab" class="tab-content flex-col gap-4">
+                <h2 class="text-2xl font-bold mb-4">Görevler</h2>
+                <p class="text-slate-400 mb-6">Kazımı başlatabilmek için aşağıdaki görevleri tamamlayın.</p>
+                
+                <div class="glass-effect p-4 rounded-lg flex justify-between items-center">
+                    <div>
+                        <h3 class="font-semibold">Telegram Kanalı</h3>
+                        <p class="text-sm text-slate-400">Duyurular için katılın.</p>
+                    </div>
+                    <button id="task-telegram" class="task-btn bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                        Katıl
+                    </button>
+                </div>
+                
+                <div class="glass-effect p-4 rounded-lg flex justify-between items-center">
+                    <div>
+                        <h3 class="font-semibold">X (Twitter) Sayfası</h3>
+                        <p class="text-sm text-slate-400">Gelişmeleri takip edin.</p>
+                    </div>
+                    <button id="task-x" class="task-btn bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                        Takip Et
+                    </button>
+                </div>
+            </div>
+
+            <!-- Referral Tab -->
+            <div id="referral-tab" class="tab-content flex-col items-center text-center">
+                 <h2 class="text-2xl font-bold mb-4">Arkadaşlarını Davet Et</h2>
+                 <p class="text-slate-400 mb-6">Her davet ettiğin arkadaşın için kazım hızını artır! Her arkadaşın sana <span class="font-bold text-violet-400">x0.2</span> hız kazandırır.</p>
+                 <div class="w-full p-4 glass-effect rounded-lg">
+                    <p class="text-sm text-slate-300">Kazım Hızı Çarpanı</p>
+                    <p id="referral-multiplier" class="text-4xl font-bold text-green-400 my-2">x1.0</p>
+                 </div>
+                 <div class="w-full p-4 mt-6 glass-effect rounded-lg">
+                     <p class="text-sm text-slate-300 mb-2">Davet Linkin</p>
+                     <div class="flex gap-2">
+                        <input id="referral-link" type="text" readonly class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-300 text-sm" value="https://t.me/yourairdrop_bot?start=12345">
+                        <button id="copy-ref-link" class="bg-violet-500 p-2 rounded-lg text-white">
+                            <i data-lucide="copy" class="w-5 h-5"></i>
+                        </button>
+                     </div>
+                 </div>
+            </div>
+            
+            <!-- Airdrop Tab -->
+            <div id="airdrop-tab" class="tab-content flex-col gap-4">
+                 <h2 class="text-2xl font-bold mb-4">Airdrop Pazarı</h2>
+                 <p class="text-slate-400 mb-6">Topladığın puanlarla airdrop'ları talep et.</p>
+
+                <div class="glass-effect p-4 rounded-lg flex justify-between items-center">
+                    <div>
+                        <h3 class="font-semibold">Token Airdrop #1</h3>
+                        <p class="text-sm text-amber-400 font-bold">10,000 Puan</p>
+                    </div>
+                    <button data-cost="10000" class="claim-btn btn-primary text-white font-semibold py-2 px-4 rounded-lg">
+                        Talep Et
+                    </button>
+                </div>
+                <div class="glass-effect p-4 rounded-lg flex justify-between items-center">
+                    <div>
+                        <h3 class="font-semibold">Token Airdrop #2</h3>
+                        <p class="text-sm text-amber-400 font-bold">50,000 Puan</p>
+                    </div>
+                    <button data-cost="50000" class="claim-btn btn-primary text-white font-semibold py-2 px-4 rounded-lg">
+                        Talep Et
+                    </button>
+                </div>
+                 <div class="glass-effect p-4 rounded-lg flex justify-between items-center opacity-50">
+                    <div>
+                        <h3 class="font-semibold">Özel NFT Airdrop</h3>
+                        <p class="text-sm text-amber-400 font-bold">100,000 Puan</p>
+                    </div>
+                    <button data-cost="100000" class="claim-btn btn-primary text-white font-semibold py-2 px-4 rounded-lg" disabled>
+                        Talep Et
+                    </button>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Navigation -->
+        <nav class="fixed bottom-0 left-0 right-0 p-2 glass-effect">
+            <div class="flex justify-around">
+                <button class="nav-item active flex flex-col items-center gap-1 text-slate-400 p-2" data-tab="mining-tab">
+                    <i data-lucide="gem" class="w-6 h-6"></i>
+                    <span class="text-xs font-medium">Kazım</span>
+                </button>
+                <button class="nav-item flex flex-col items-center gap-1 text-slate-400 p-2" data-tab="tasks-tab">
+                    <i data-lucide="check-square" class="w-6 h-6"></i>
+                    <span class="text-xs font-medium">Görevler</span>
+                </button>
+                <button class="nav-item flex flex-col items-center gap-1 text-slate-400 p-2" data-tab="referral-tab">
+                    <i data-lucide="users" class="w-6 h-6"></i>
+                    <span class="text-xs font-medium">Davet</span>
+                </button>
+                <button class="nav-item flex flex-col items-center gap-1 text-slate-400 p-2" data-tab="airdrop-tab">
+                    <i data-lucide="gift" class="w-6 h-6"></i>
+                    <span class="text-xs font-medium">Airdrop</span>
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Airdrop Claim Modal -->
+    <div id="claim-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-xl p-6 w-full max-w-sm text-center">
+            <h2 class="text-xl font-bold mb-2">Airdrop Talebi</h2>
+            <p class="text-slate-400 mb-6">Lütfen airdrop'u alacağınız cüzdan adresinizi girin (BEP-20/ERC-20).</p>
+            <input id="wallet-address" type="text" placeholder="0x..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 mb-4">
+            <p class="text-sm text-red-400 mb-4">Bu işlem geri alınamaz. Adresinizin doğru olduğundan emin olun.</p>
+            <div class="flex gap-4">
+                <button id="cancel-claim" class="w-full bg-slate-600 text-white font-bold py-3 rounded-lg">İptal</button>
+                <button id="confirm-claim" class="w-full btn-primary text-white font-bold py-3 rounded-lg">Onayla</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 bg-green-500 text-white py-2 px-5 rounded-full text-sm font-semibold shadow-lg">
+        Bildirim Mesajı
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const API_BASE_URL = 'http://localhost:3000'; // Backend sunucu adresiniz
+
+            // --- STATE MANAGEMENT (Artık sunucudan yönetilecek) ---
+            let state = {
+                user: null, // Kullanıcı bilgileri sunucudan gelecek
+                currentClaimCost: 0
+            };
+            
+            // --- DOM ELEMENTS ---
+            const screens = {
+                login: document.getElementById('login-screen'),
+                register: document.getElementById('register-screen'),
+                main: document.getElementById('main-app-screen')
+            };
+            const navItems = document.querySelectorAll('.nav-item');
+            const tabs = document.querySelectorAll('.tab-content');
+            const miningButton = document.getElementById('mining-button');
+            const taskWarning = document.getElementById('task-warning');
+            const totalPointsEl = document.getElementById('total-points');
+            const liveEarningEl = document.getElementById('live-earning');
+            const miningTimerEl = document.getElementById('mining-timer');
+            const taskButtons = {
+                telegram: document.getElementById('task-telegram'),
+                x: document.getElementById('task-x')
+            };
+            const toastEl = document.getElementById('toast');
+            const claimModal = document.getElementById('claim-modal');
+
+            let timerInterval;
+
+            // --- FUNCTIONS ---
+            
+            const showScreen = (screenName) => {
+                Object.values(screens).forEach(s => s.classList.remove('active'));
+                screens[screenName].classList.add('active');
+            };
+
+            const showToast = (message, isSuccess = true) => {
+                toastEl.textContent = message;
+                toastEl.classList.remove('bg-green-500', 'bg-red-500');
+                toastEl.classList.add(isSuccess ? 'bg-green-500' : 'bg-red-500');
+                toastEl.classList.remove('hidden');
+                setTimeout(() => {
+                    toastEl.classList.add('hidden');
+                }, 3000);
+            };
+
+            // loadState ve saveState fonksiyonları artık kullanılmayacak.
+            
+            const updateUI = () => {
+                if (!state.user) return; // Kullanıcı verisi yoksa UI güncellenmez
+
+                const user = state.user;
+                // User info
+                document.getElementById('display-username').textContent = user.username || 'Kullanıcı';
+                document.getElementById('display-telegram-user').textContent = '@' + user.telegramUser;
+                document.getElementById('referral-link').value = `https://t.me/yourairdrop_bot?start=${user.telegramId}`;
+                
+                // Points
+                totalPointsEl.textContent = user.totalPoints.toFixed(4);
+                
+                // Tasks
+                const allTasksDone = Object.values(user.tasks).every(Boolean);
+                if(user.tasks.telegram) {
+                    taskButtons.telegram.textContent = 'Tamamlandı';
+                    taskButtons.telegram.classList.add('task-completed');
+                    taskButtons.telegram.disabled = true;
+                }
+                if(user.tasks.x) {
+                    taskButtons.x.textContent = 'Tamamlandı';
+                    taskButtons.x.classList.add('task-completed');
+                    taskButtons.x.disabled = true;
+                }
+                
+                // Mining button
+                if (user.isMining) {
+                    miningButton.textContent = 'Kazım Yapılıyor...';
+                    miningButton.disabled = true;
+                    miningButton.classList.remove('pulse-animation');
+                    taskWarning.classList.add('hidden');
+                } else {
+                    miningButton.textContent = 'Kazımı Başlat';
+                    miningButton.disabled = false;
+                     if(allTasksDone){
+                        miningButton.classList.add('pulse-animation');
+                        taskWarning.classList.add('hidden');
+                    } else {
+                        miningButton.classList.remove('pulse-animation');
+                        taskWarning.classList.remove('hidden');
+                    }
+                }
+
+                // Referral multiplier
+                document.getElementById('referral-multiplier').textContent = `x${user.referralMultiplier.toFixed(1)}`;
+
+                // Airdrop buttons
+                document.querySelectorAll('.claim-btn').forEach(btn => {
+                    const cost = parseInt(btn.dataset.cost);
+                    if(user.totalPoints >= cost && allTasksDone) {
+                        btn.disabled = false;
+                    } else {
+                        btn.disabled = true;
+                    }
+                });
+            };
+
+            const startMining = async () => {
+                if (!state.user) return;
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/mining/start`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ telegramId: state.user.telegramId })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        state.user = data.user;
+                        showToast('Kazım başlatıldı!', true);
+                        updateUI();
+                        startTimer();
+                    } else {
+                        showToast(data.message, false);
+                    }
+                } catch (error) {
+                    console.error('Kazım başlatma hatası:', error);
+                    showToast('Bir hata oluştu.', false);
+                }
+            };
+            
+            const startTimer = () => {
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(updateTimer, 1000);
+            };
+
+            const updateTimer = () => {
+                if (!state.user || !state.user.isMining || !state.user.miningEndTime) {
+                     if (timerInterval) clearInterval(timerInterval);
+                     return;
+                }
+                
+                const now = Date.now();
+                const remaining = state.user.miningEndTime - now;
+
+                if (remaining <= 0) {
+                    clearInterval(timerInterval);
+                    // Sunucudan son durumu tekrar çekmek en sağlıklısı
+                    fetchUserData(state.user.telegramId); 
+                    showToast('Kazım seansı tamamlandı!', true);
+                    return;
+                }
+                
+                const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
+                const minutes = Math.floor((remaining / 1000 / 60) % 60);
+                const seconds = Math.floor((remaining / 1000) % 60);
+                miningTimerEl.textContent = 
+                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+                // Canlı kazanç hesabı (frontend'de anlık gösterim için)
+                const sessionDuration = 24 * 3600 * 1000;
+                const timePassed = sessionDuration - remaining;
+                const pointsPerSecond = (100 * state.user.referralMultiplier) / (24 * 3600);
+                const sessionEarnings = (timePassed / 1000) * pointsPerSecond;
+                liveEarningEl.textContent = sessionEarnings.toFixed(4);
+
+            };
+            
+            // --- EVENT LISTENERS ---
+
+            // Navigation
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const targetTab = item.dataset.tab;
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    item.classList.add('active');
+                    tabs.forEach(tab => tab.classList.remove('active'));
+                    document.getElementById(targetTab).classList.add('active');
+                    tabs.forEach(tab => tab.style.display = 'none');
+                    document.getElementById(targetTab).style.display = 'flex';
+                });
+            });
+            
+            // Auth ekranları artık kullanılmıyor, ilgili event listener'ları silebilir veya bırakabilirsiniz.
+
+            // Mining
+            miningButton.addEventListener('click', startMining);
+
+            // Tasks
+            Object.keys(taskButtons).forEach(taskKey => {
+                taskButtons[taskKey].addEventListener('click', async () => {
+                     // Gerçek uygulamada, bu butonlar ilgili Telegram kanalına veya X sayfasına yönlendirmeli
+                    // ve API ile doğrulama yapılmalı. Bu bir simülasyondur.
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/tasks/complete`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ telegramId: state.user.telegramId, taskKey })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            state.user = data.user;
+                            showToast(`${taskKey.toUpperCase()} görevi tamamlandı!`, true);
+                            updateUI();
+                        } else {
+                            showToast('Görev tamamlanamadı.', false);
+                        }
+                    } catch (error) {
+                        showToast('Bir hata oluştu.', false);
+                    }
+                });
+            });
+            
+            // Referral
+            document.getElementById('copy-ref-link').addEventListener('click', () => {
+                const link = document.getElementById('referral-link');
+                link.select();
+                document.execCommand('copy');
+                showToast('Davet linki kopyalandı!', true);
+            });
+
+            // Airdrop Claim
+            document.querySelectorAll('.claim-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.currentClaimCost = parseInt(btn.dataset.cost);
+                    claimModal.classList.remove('hidden');
+                });
+            });
+
+            document.getElementById('cancel-claim').addEventListener('click', () => {
+                claimModal.classList.add('hidden');
+            });
+
+            document.getElementById('confirm-claim').addEventListener('click', async () => {
+                const walletAddress = document.getElementById('wallet-address').value;
+                if (!walletAddress || !walletAddress.startsWith('0x')) {
+                    showToast('Lütfen geçerli bir cüzdan adresi girin.', false);
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/airdrop/claim`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            telegramId: state.user.telegramId,
+                            cost: state.currentClaimCost,
+                            walletAddress: walletAddress
+                        })
+                    });
+                    const data = await response.json();
+
+                    if(data.success) {
+                        state.user = data.user;
+                        claimModal.classList.add('hidden');
+                        document.getElementById('wallet-address').value = '';
+                        showToast('Airdrop talebiniz alındı!', true);
+                        updateUI();
+                    } else {
+                        showToast(data.message, false);
+                    }
+                } catch (error) {
+                     showToast('Bir hata oluştu.', false);
+                }
+            });
+
+            // --- INITIALIZATION ---
+            async function fetchUserData(telegramId) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/user/${telegramId}`);
+                    const data = await response.json();
+                    if(data.success) {
+                        state.user = data.user;
+                        state.user.telegramId = telegramId; // telegramId'yi state'e ekle
+                        updateUI();
+                        if (state.user.isMining) {
+                           startTimer();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Kullanıcı verisi alınamadı:', error);
+                    document.body.innerHTML = '<div class="text-white text-center p-8">Uygulama yüklenemedi. Lütfen daha sonra tekrar deneyin.</div>';
+                }
+            }
+
+            function initApp() {
+                const tg = window.Telegram.WebApp;
+                tg.ready(); // Telegram Web App'in hazır olduğunu bildir
+
+                // Güvenlik için initData'yı backend'de doğrulamak en iyisidir.
+                const initData = tg.initDataUnsafe || {};
+                const user = initData.user;
+                
+                if (user && user.id) {
+                    fetchUserData(user.id);
+                } else {
+                    // Telegram dışında veya test ortamında açıldıysa
+                    console.warn('Telegram kullanıcı bilgisi bulunamadı. Test modu aktif.');
+                    fetchUserData('123456789'); // Test kullanıcısı ile devam et
+                    // Veya login ekranını göster
+                    // showScreen('login');
+                }
+            }
+            
+            initApp();
+            
+            // Sayfa yüklendiğinde ilk sekmeyi göster
+            document.querySelector('.tab-content.active').style.display = 'flex';
+        });
+    </script>
+</body>
+</html>
+
