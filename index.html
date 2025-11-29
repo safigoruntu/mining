@@ -55,13 +55,13 @@
         <header class="p-6 flex justify-between items-center flex-shrink-0">
             <div>
                 <h2 class="text-sm text-gray-400 font-medium">Welcome,</h2>
-                <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Tetra User</h1>
+                <h1 id="user-display-name" class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400"></h1>
             </div>
-            <div class="relative group cursor-pointer" onclick="handleProfileClick()">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px]">
-                    <img src="https://ui-avatars.com/api/?name=Tetra+Hub&background=0D0D0D&color=fff" alt="Profile" class="rounded-full w-full h-full object-cover">
+            <div id="profile-div" class="relative group cursor-default">
+                <div id="profile-picture-container" class="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px]">
+                    <img id="profile-image" src="" alt="Profile" class="rounded-full w-full h-full object-cover">
                 </div>
-                <div class="absolute top-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
+                <div id="online-status" class="absolute top-0 right-0 w-3 h-3 rounded-full border-2 border-black"></div>
             </div>
         </header>
 
@@ -146,7 +146,6 @@
         </div>
     </div>
 
-
     <div id="module-view" class="fixed inset-0 z-[110] bg-black/95 hidden flex flex-col max-w-md mx-auto w-full h-full">
         <header class="p-6 flex justify-between items-center flex-shrink-0 glass-panel border-b-0 rounded-b-xl">
             <button onclick="closeModuleView()" class="text-lg text-white/80 hover:text-white transform active:scale-95 transition">
@@ -160,11 +159,9 @@
         <div class="relative flex-1 text-gray-300 flex flex-col">
             <div id="module-color" class="absolute inset-0"></div>
             <div id="module-content" class="relative z-10 flex-1 overflow-y-auto">
-
             </div>
         </div>
     </div>
-
 
 
     <script>
@@ -177,9 +174,43 @@
             { id: 'profile', title: 'Profile', subtitle: 'NFT & ID', emoji: '👤', url: '#profile', colorStart: 'from-gray-600', colorEnd: 'to-gray-800' }
         ];
 
+        const mockUser = {
+            isLoggedIn: true,
+            firstName: 'Super',
+            lastName: 'User',
+            // Set profilePic to null or empty string to see initials (SU)
+            // Set profilePic to a URL to see an image
+            profilePic: '', // 'https://images.unsplash.com/photo-1511367461989-ee79611acb50?w=40&h=40&fit=crop', 
+            isOnline: true
+        };
+
         let apps = JSON.parse(localStorage.getItem('tetraHubApps')) || JSON.parse(JSON.stringify(defaultApps));
         let globalProfileUrl = localStorage.getItem('tetraHubProfileUrl') || '#profile';
         let navigationTimeout;
+
+        function updateProfileUI() {
+            const displayName = document.getElementById('user-display-name');
+            const profileImage = document.getElementById('profile-image');
+            const onlineStatus = document.getElementById('online-status');
+            
+            if (mockUser.isLoggedIn) {
+                displayName.innerText = `${mockUser.firstName} ${mockUser.lastName}`;
+
+                let imageUrl = '';
+                if (mockUser.profilePic && mockUser.profilePic.startsWith('http')) {
+                    imageUrl = mockUser.profilePic;
+                } else {
+                    const initials = `${mockUser.firstName.charAt(0)}${mockUser.lastName.charAt(0)}`;
+                    imageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=a78bfa&color=fff&size=40&bold=true`;
+                }
+                profileImage.src = imageUrl;
+            } else {
+                displayName.innerText = 'Guest';
+                profileImage.src = 'https://ui-avatars.com/api/?name=GH&background=0D0D0D&color=fff';
+            }
+            
+            onlineStatus.className = `absolute top-0 right-0 w-3 h-3 rounded-full border-2 border-black ${mockUser.isOnline ? 'bg-green-500' : 'bg-gray-500'}`;
+        }
 
         function renderGrid() {
             const container = document.getElementById('grid-container');
@@ -198,17 +229,12 @@
             });
         }
 
-        function handleProfileClick() {
-            window.location.href = globalProfileUrl;
-        }
-
         function triggerTransition(event, app) {
             const overlay = document.getElementById('transition-overlay');
             const bg = document.getElementById('transition-bg');
             const emoji = document.getElementById('transition-emoji');
             const title = document.getElementById('transition-title');
             const line = document.getElementById('transition-line');
-
 
             emoji.classList.remove('scale-100', 'opacity-100'); emoji.classList.add('scale-0', 'opacity-0');
             title.classList.remove('translate-y-0', 'opacity-100'); title.classList.add('translate-y-10', 'opacity-0');
@@ -238,7 +264,6 @@
             const moduleView = document.getElementById('module-view');
             const moduleContent = document.getElementById('module-content');
             
-
             document.getElementById('module-title').innerText = app.title;
             document.getElementById('module-emoji').innerText = app.emoji;
             document.getElementById('module-color').className = `absolute inset-0 bg-gradient-to-br ${app.colorStart} ${app.colorEnd} opacity-10`;
@@ -246,13 +271,9 @@
             const isExternal = app.url.startsWith('http');
 
             if (isExternal) {
-
-                moduleContent.innerHTML = `
-                    <iframe src="${app.url}" class="w-full h-full border-0 rounded-none bg-black"></iframe>
-                `;
-                moduleContent.classList.remove('p-6'); 
+                moduleContent.innerHTML = `<iframe src="${app.url}" class="w-full h-full border-0 rounded-none bg-black"></iframe>`;
+                moduleContent.classList.remove('p-6');
             } else {
-
                 moduleContent.innerHTML = `
                     <div class="p-4 border border-white/10 rounded-xl glass-panel text-center mb-6">
                         <p class="text-2xl font-semibold mb-2">Simulated App Content</p>
@@ -269,18 +290,13 @@
                             <li class="flex items-center"><i class="fas fa-check-circle text-green-400 mr-2"></i> Customizable settings</li>
                         </ul>
                     </div>
-                    <div class="h-10"></div> <!-- Extra padding for scrolling to the bottom -->
+                    <div class="h-10"></div>
                 `;
-                moduleContent.classList.add('p-6'); 
+                moduleContent.classList.add('p-6');
             }
 
-
             document.getElementById('app').style.display = 'none';
-            
-
             setTimeout(closeTransition, 600);
-            
-
             moduleView.classList.remove('hidden');
         }
 
@@ -390,7 +406,10 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        window.onload = function() { renderGrid(); };
+        window.onload = function() { 
+            renderGrid(); 
+            updateProfileUI(); 
+        };
     </script>
 </body>
 </html>
