@@ -195,9 +195,9 @@
             setTimeout(() => { emoji.classList.remove('scale-0', 'opacity-0'); emoji.classList.add('scale-100', 'opacity-100'); }, 100);
             setTimeout(() => { title.classList.remove('translate-y-10', 'opacity-0'); title.classList.add('translate-y-0', 'opacity-100'); }, 200);
             setTimeout(() => { line.classList.remove('scale-x-0'); line.classList.add('scale-x-100'); }, 300);
+            
             setTimeout(() => { 
-                console.log("Navigating to:", app.url);
-                setTimeout(() => { closeTransition(); }, 1000);
+                window.location.href = app.url;
             }, 1500);
         }
 
