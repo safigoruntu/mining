@@ -40,8 +40,8 @@
         .glass-card:active { transform: scale(0.96); background: rgba(30, 41, 59, 0.8); }
         ::-webkit-scrollbar { display: none; }
         * { -ms-overflow-style: none; scrollbar-width: none; }
-        #transition-overlay { clip-path: circle(0% at 50% 50%); transition: clip-path 0.6s cubic-bezier(0.7, 0, 0.3, 1); }
-        #transition-overlay.active { clip-path: circle(150% at 50% 50%); }
+        #transition-overlay { clip-path: circle(0% at 50% 50%); transition: clip-path 0.6s cubic-bezier(0.7, 0, 0.3, 1); pointer-events: none; }
+        #transition-overlay.active { clip-path: circle(150% at 50% 50%); pointer-events: auto; }
     </style>
 </head>
 <body class="antialiased h-screen overflow-hidden flex flex-col">
@@ -142,12 +142,36 @@
             <div id="transition-emoji" class="text-8xl mb-6 transform scale-0 opacity-0 transition-all duration-500"></div>
             <h2 id="transition-title" class="text-4xl font-bold text-white mb-2 transform translate-y-10 opacity-0 transition-all duration-500 delay-100"></h2>
             <div class="w-16 h-1 bg-white/50 mx-auto rounded-full mt-4 transform scale-x-0 transition-all duration-500 delay-200" id="transition-line"></div>
-            <p class="text-white/60 mt-4 text-sm animate-pulse">Loading...</p>
+            <p class="text-white/60 mt-4 text-sm animate-pulse">Navigating...</p>
         </div>
-        <button onclick="cancelTransition()" id="cancel-btn" class="absolute bottom-10 z-20 text-white/70 hover:text-white text-sm font-medium opacity-0 transition-opacity duration-300 transform active:scale-95">
-            <i class="fas fa-arrow-left mr-2"></i>Back to Hub
-        </button>
     </div>
+
+    <!-- NEW: Simulated Module View -->
+    <div id="module-view" class="fixed inset-0 z-[110] bg-black/95 hidden flex flex-col max-w-md mx-auto w-full h-full">
+        <header class="p-6 flex justify-between items-center flex-shrink-0 glass-panel border-b-0 rounded-b-xl">
+            <button onclick="closeModuleView()" class="text-lg text-white/80 hover:text-white transform active:scale-95 transition">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Hub
+            </button>
+            <div class="flex items-center space-x-2">
+                <span id="module-emoji" class="text-xl"></span>
+                <h1 id="module-title" class="text-xl font-bold"></h1>
+            </div>
+        </header>
+        <div class="relative flex-1 overflow-y-auto p-6 text-gray-300">
+            <div id="module-color" class="absolute inset-0"></div>
+            <div class="relative z-10 p-4 border border-white/10 rounded-xl glass-panel text-center">
+                <p class="text-2xl font-semibold mb-2">Simulated App Content</p>
+                <p class="text-sm">This is where the actual content for <span class="text-indigo-400 font-medium" id="module-app-id"></span> module would be loaded. Since this is a single HTML file, this view simulates the destination page, allowing you to easily return to the hub.</p>
+                <div class="mt-4 p-3 bg-white/5 rounded-lg text-xs">
+                    <p class="font-mono" id="module-target-url"></p>
+                </div>
+            </div>
+            
+            <div class="h-40"></div>
+        </div>
+    </div>
+    <!-- END NEW MODULE VIEW -->
+
 
     <script>
         const defaultApps = [
@@ -161,7 +185,7 @@
 
         let apps = JSON.parse(localStorage.getItem('tetraHubApps')) || JSON.parse(JSON.stringify(defaultApps));
         let globalProfileUrl = localStorage.getItem('tetraHubProfileUrl') || '#profile';
-        let navigationTimeout; // Global to manage the navigation timeout
+        let navigationTimeout;
 
         function renderGrid() {
             const container = document.getElementById('grid-container');
@@ -191,6 +215,11 @@
             const title = document.getElementById('transition-title');
             const line = document.getElementById('transition-line');
 
+            // Reset transition elements
+            emoji.classList.remove('scale-100', 'opacity-100'); emoji.classList.add('scale-0', 'opacity-0');
+            title.classList.remove('translate-y-0', 'opacity-100'); title.classList.add('translate-y-10', 'opacity-0');
+            line.classList.remove('scale-x-100'); line.classList.add('scale-x-0');
+
             emoji.innerText = app.emoji;
             title.innerText = app.title;
             bg.className = `absolute inset-0 bg-gradient-to-br opacity-90 ${app.colorStart} ${app.colorEnd}`;
@@ -200,12 +229,45 @@
             setTimeout(() => { title.classList.remove('translate-y-10', 'opacity-0'); title.classList.add('translate-y-0', 'opacity-100'); }, 200);
             setTimeout(() => { line.classList.remove('scale-x-0'); line.classList.add('scale-x-100'); }, 300);
             
-            // Show cancel button after a short delay
-            setTimeout(() => { document.getElementById('cancel-btn').style.opacity = '1'; }, 500);
-
+            clearTimeout(navigationTimeout); 
+            
             navigationTimeout = setTimeout(() => { 
-                window.location.href = app.url;
+                if (app.url.startsWith('http') || app.url === '#') {
+                    // External URL or simple anchor, proceed with standard navigation
+                    window.location.href = app.url;
+                } else if (app.url.startsWith('#') && app.url.length > 1) {
+                    // Internal hash link, simulate app view
+                    openModuleView(app);
+                } else {
+                    // Default fallback
+                    window.location.href = app.url;
+                }
             }, 1500);
+        }
+
+        function openModuleView(app) {
+            const moduleView = document.getElementById('module-view');
+            
+            // Setup module view content
+            document.getElementById('module-title').innerText = app.title;
+            document.getElementById('module-emoji').innerText = app.emoji;
+            document.getElementById('module-app-id').innerText = app.title;
+            document.getElementById('module-target-url').innerText = `Target URL: ${app.url}`;
+            document.getElementById('module-color').className = `absolute inset-0 bg-gradient-to-br ${app.colorStart} ${app.colorEnd} opacity-10`;
+
+            // Hide main app content
+            document.getElementById('app').style.display = 'none';
+            
+            // Hide the cinematic overlay after 600ms (its clip-path transition duration)
+            setTimeout(closeTransition, 600);
+            
+            // Show module view
+            moduleView.classList.remove('hidden');
+        }
+
+        function closeModuleView() {
+            document.getElementById('module-view').classList.add('hidden');
+            document.getElementById('app').style.display = 'flex';
         }
 
         function cancelTransition() {
@@ -216,10 +278,6 @@
 
         function closeTransition() {
             const overlay = document.getElementById('transition-overlay');
-            
-            // Hide cancel button immediately
-            document.getElementById('cancel-btn').style.opacity = '0';
-
             overlay.classList.remove('active');
             setTimeout(() => {
                 const emoji = document.getElementById('transition-emoji');
@@ -296,15 +354,14 @@
         }
 
         function resetDefaults() {
-            if(confirm('Are you sure you want to reset all settings to default?')) {
-                apps = JSON.parse(JSON.stringify(defaultApps));
-                localStorage.setItem('tetraHubApps', JSON.stringify(apps));
-                localStorage.removeItem('tetraHubProfileUrl');
-                globalProfileUrl = '#profile';
-                renderGrid();
-                closeSettings();
-                showToast('Defaults Loaded.');
-            }
+            // Replaced alert/confirm with direct reset and toast feedback
+            apps = JSON.parse(JSON.stringify(defaultApps));
+            localStorage.setItem('tetraHubApps', JSON.stringify(apps));
+            localStorage.removeItem('tetraHubProfileUrl');
+            globalProfileUrl = '#profile';
+            renderGrid();
+            closeSettings();
+            showToast('Defaults Loaded.');
         }
 
         function showToast(message) {
