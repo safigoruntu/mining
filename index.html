@@ -146,7 +146,6 @@
         </div>
     </div>
 
-    <!-- NEW: Simulated Module View -->
     <div id="module-view" class="fixed inset-0 z-[110] bg-black/95 hidden flex flex-col max-w-md mx-auto w-full h-full">
         <header class="p-6 flex justify-between items-center flex-shrink-0 glass-panel border-b-0 rounded-b-xl">
             <button onclick="closeModuleView()" class="text-lg text-white/80 hover:text-white transform active:scale-95 transition">
@@ -170,7 +169,6 @@
             <div class="h-40"></div>
         </div>
     </div>
-    <!-- END NEW MODULE VIEW -->
 
 
     <script>
@@ -215,7 +213,7 @@
             const title = document.getElementById('transition-title');
             const line = document.getElementById('transition-line');
 
-            // Reset transition elements
+
             emoji.classList.remove('scale-100', 'opacity-100'); emoji.classList.add('scale-0', 'opacity-0');
             title.classList.remove('translate-y-0', 'opacity-100'); title.classList.add('translate-y-10', 'opacity-0');
             line.classList.remove('scale-x-100'); line.classList.add('scale-x-0');
@@ -233,13 +231,13 @@
             
             navigationTimeout = setTimeout(() => { 
                 if (app.url.startsWith('http') || app.url === '#') {
-                    // External URL or simple anchor, proceed with standard navigation
+
                     window.location.href = app.url;
                 } else if (app.url.startsWith('#') && app.url.length > 1) {
-                    // Internal hash link, simulate app view
+
                     openModuleView(app);
                 } else {
-                    // Default fallback
+
                     window.location.href = app.url;
                 }
             }, 1500);
@@ -248,20 +246,20 @@
         function openModuleView(app) {
             const moduleView = document.getElementById('module-view');
             
-            // Setup module view content
+
             document.getElementById('module-title').innerText = app.title;
             document.getElementById('module-emoji').innerText = app.emoji;
             document.getElementById('module-app-id').innerText = app.title;
             document.getElementById('module-target-url').innerText = `Target URL: ${app.url}`;
             document.getElementById('module-color').className = `absolute inset-0 bg-gradient-to-br ${app.colorStart} ${app.colorEnd} opacity-10`;
 
-            // Hide main app content
+
             document.getElementById('app').style.display = 'none';
             
-            // Hide the cinematic overlay after 600ms (its clip-path transition duration)
+
             setTimeout(closeTransition, 600);
             
-            // Show module view
+
             moduleView.classList.remove('hidden');
         }
 
@@ -354,7 +352,7 @@
         }
 
         function resetDefaults() {
-            // Replaced alert/confirm with direct reset and toast feedback
+
             apps = JSON.parse(JSON.stringify(defaultApps));
             localStorage.setItem('tetraHubApps', JSON.stringify(apps));
             localStorage.removeItem('tetraHubProfileUrl');
@@ -376,3 +374,4 @@
     </script>
 </body>
 </html>
+
