@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TetraFund Configurable</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-main: #ffffff;
+            --text-sub: #94a3b8;
+            --card-bg: rgba(20, 20, 25, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --input-bg: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            outline: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ambient-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 0%, #1e1e24 0%, #000000 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* DASHBOARD */
+        #dashboard {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 50px;
+            perspective: 1200px;
+            padding-top: 10px;
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s;
+        }
+
+        #dashboard::-webkit-scrollbar { display: none; }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 5px 40px 15px;
+        }
+
+        .header-texts {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #main-title {
+            font-size: 38px;
+            font-weight: 900;
+            color: #ffffff;
+            margin-bottom: 4px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            letter-spacing: -0.5px;
+            transform-origin: left center;
+            animation: titleBreath 3s ease-in-out infinite;
+        }
+
+        #sub-title {
+            color: var(--text-sub);
+            font-size: 15px;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        .settings-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 50;
+        }
+
+        .settings-btn svg {
+            width: 20px;
+            height: 20px;
+            color: #fff;
+        }
+
+        /* CARDS */
+        .card-container {
+            margin-bottom: 24px;
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            opacity: 0;
+            animation: cardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        .card {
+            position: relative;
+            height: 110px;
+            background: linear-gradient(160deg, rgba(40, 40, 45, 0.8), rgba(15, 15, 20, 0.95));
+            border: 1px solid var(--border-color);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out, box-shadow 0.2s ease, border-color 0.2s ease;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 20px 40px -10px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+        }
+
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.0) 20%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.0) 80%, transparent 100%);
+            transform: skewX(-25deg);
+            animation: lightWave 3.5s infinite ease-in-out;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: 15px;
+            background: var(--card-color, #fff);
+            filter: blur(25px);
+            opacity: 0.15;
+            z-index: -1;
+            transform: translateZ(-30px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            border-radius: 30px;
+        }
+
+        .card:active {
+            transform: scale(0.96);
+            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 0 30px var(--card-color, #fff), inset 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .icon-box {
+            width: 56px; height: 56px;
+            border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            margin-right: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+            color: var(--card-color, #fff);
+            transform: translateZ(25px);
+            font-size: 24px;
+        }
+
+        .content { flex: 1; transform: translateZ(15px); }
+        .title { font-size: 19px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .desc { font-size: 13px; color: var(--text-sub); font-weight: 500; }
+        .arrow { opacity: 0.3; transform: translateZ(15px); color: #fff; }
+
+        /* SPLASH & APP FRAME */
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            z-index: 200;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        #splash-screen.active { opacity: 1; pointer-events: all; }
+        #splash-screen.active .splash-content { transform: scale(1); }
+        .splash-content { text-align: center; transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .splash-emoji { font-size: 80px; margin-bottom: 20px; display: block; filter: drop-shadow(0 0 40px rgba(255,255,255,0.4)); animation: floatEmoji 2s ease-in-out infinite; }
+        .splash-title { font-size: 32px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 25px currentColor; opacity: 0; transform: translateY(20px); }
+        #splash-screen.active .splash-title { animation: textReveal 0.6s ease forwards 0.2s; }
+
+        #app-frame-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 100;
+            transform: translate3d(0, 100%, 0);
+            transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+            display: flex; flex-direction: column;
+        }
+        #app-frame-container.active { transform: translate3d(0, 0, 0); }
+        .app-bar { height: 56px; display: flex; align-items: center; padding: 0 20px; background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+        .back-button { display: flex; align-items: center; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .back-button svg { margin-right: 10px; width: 22px; }
+        iframe { flex: 1; width: 100%; border: none; background: #111; }
+
+        /* SETTINGS MODAL */
+        #settings-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 300;
+            transform: translateY(100%); transition: transform 0.4s ease;
+            display: flex; flex-direction: column;
+        }
+        #settings-modal.active { transform: translateY(0); }
+        
+        .settings-header {
+            padding: 20px; display: flex; justify-content: space-between; align-items: center;
+            background: rgba(20, 20, 20, 0.9); border-bottom: 1px solid var(--border-color);
+        }
+        .settings-title { font-size: 20px; font-weight: 700; }
+        .close-settings { color: #f43f5e; font-weight: 600; cursor: pointer; }
+        
+        .settings-content {
+            flex: 1; overflow-y: auto; padding: 20px;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .form-input {
+            width: 100%; background: var(--input-bg); border: none; border-bottom: 1px solid var(--border-color);
+            color: #fff; padding: 12px; font-size: 16px; border-radius: 8px 8px 0 0;
+        }
+        .form-input:focus { border-bottom-color: #3b82f6; background: rgba(255,255,255,0.15); }
+        
+        .card-edit-block {
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+        }
+        .card-edit-header { font-weight: 600; margin-bottom: 10px; color: #3b82f6; }
+        .row { display: flex; gap: 10px; }
+
+        .btn-save {
+            width: 100%; background: #3b82f6; color: white; padding: 15px;
+            font-weight: 700; border: none; font-size: 16px; margin-top: 20px;
+            border-radius: 12px; cursor: pointer;
+        }
+        .btn-reset {
+            width: 100%; background: transparent; color: #f43f5e; padding: 15px;
+            font-weight: 600; border: 1px solid #f43f5e; font-size: 14px; margin-top: 10px;
+            border-radius: 12px; cursor: pointer; margin-bottom: 30px;
+        }
+
+        /* Animations */
+        @keyframes cardEnter { from { opacity: 0; transform: translateY(40px) rotateX(20deg); } to { opacity: 1; transform: translateY(0) rotateX(0); } }
+        @keyframes floatEmoji { 0%, 100% { transform: translateY(0) rotate(-5deg); } 50% { transform: translateY(-15px) rotate(5deg); } }
+        @keyframes textReveal { to { opacity: 1; transform: translateY(0); } }
+        @keyframes lightWave { 0% { left: -100%; } 50% { left: 200%; } 100% { left: 200%; } }
+        @keyframes titleBreath { 0%, 100% { transform: scale(1); text-shadow: 0 0 20px rgba(255, 255, 255, 0.3); } 50% { transform: scale(1.03); text-shadow: 0 0 35px rgba(255, 255, 255, 0.6); } }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-bg"></div>
+
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <span class="splash-emoji" id="splash-emoji"></span>
+            <div class="splash-title" id="splash-title"></div>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard">
+        <div class="header-container">
+            <div class="header-texts">
+                <h1 id="main-title">TetraFund</h1>
+                <p id="sub-title">EcoSystem Hub</p>
+            </div>
+            <div class="settings-btn" onclick="openSettings()">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </div>
+        </div>
+        <div id="cards-wrapper"></div>
+    </div>
+
+    <!-- App Browser (Iframe) -->
+    <div id="app-frame-container">
+        <div class="app-bar">
+            <div class="back-button" onclick="closeApp()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Back to Dashboard
+            </div>
+        </div>
+        <iframe id="main-frame" src=""></iframe>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal">
+        <div class="settings-header">
+            <div class="settings-title">App Configuration</div>
+            <div class="close-settings" onclick="closeSettings()">Close</div>
+        </div>
+        <div class="settings-content">
+            <div class="form-group">
+                <label class="form-label">Main Title</label>
+                <input type="text" id="input-main-title" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Sub Title</label>
+                <input type="text" id="input-sub-title" class="form-input">
+            </div>
+            
+            <div id="card-settings-list"></div>
+
+            <button class="btn-save" onclick="saveConfig()">Save & Apply</button>
+            <button class="btn-reset" onclick="resetConfig()">Reset to Default</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.enableClosingConfirmation();
+        tg.setHeaderColor('#000000');
+
+        // Default Config
+        const defaultConfig = {
+            mainTitle: "TetraFund",
+            subTitle: "EcoSystem Hub",
+            cards: [
+                { id: 1, title: "Airdrop", desc: "Claim Daily Rewards", url: "https://tetrafundtoken.com/beta/airdrop", emoji: "🪂", color: "#fbbf24", icon: "path" },
+                { id: 2, title: "TetraGame", desc: "Play & Earn Crypto", url: "https://tetrafundtoken.com/beta/tetragames", emoji: "🎮", color: "#f43f5e", icon: "rect" },
+                { id: 3, title: "TetraSocial", desc: "Community Hub", url: "https://tetrafundtoken.com/beta/tetrasocial", emoji: "🌐", color: "#3b82f6", icon: "circle" },
+                { id: 4, title: "Staking", desc: "High APY Yields", url: "https://tetrafundtoken.com/beta/staking", emoji: "🏦", color: "#10b981", icon: "line" },
+                { id: 5, title: "Swap", desc: "Instant Exchange", url: "https://tetrafundtoken.com/beta/swap", emoji: "🔄", color: "#d946ef", icon: "arrow" },
+                { id: 6, title: "Profile", desc: "Settings & Wallet", url: "https://tetrafundtoken.com/beta/profile", emoji: "👤", color: "#ffffff", icon: "user" }
+            ]
+        };
+
+        // State Management
+        let config = JSON.parse(localStorage.getItem('tetraConfig')) || defaultConfig;
+
+        // Elements
+        const dashboard = document.getElementById('dashboard');
+        const cardsWrapper = document.getElementById('cards-wrapper');
+        const appContainer = document.getElementById('app-frame-container');
+        const iframe = document.getElementById('main-frame');
+        const splashScreen = document.getElementById('splash-screen');
+        const splashEmoji = document.getElementById('splash-emoji');
+        const splashTitle = document.getElementById('splash-title');
+        const settingsModal = document.getElementById('settings-modal');
+
+        // Render Functions
+        function renderDashboard() {
+            document.getElementById('main-title').innerText = config.mainTitle;
+            document.getElementById('sub-title').innerText = config.subTitle;
+            
+            cardsWrapper.innerHTML = '';
+            
+            config.cards.forEach((card, index) => {
+                const delay = index * 0.05;
+                const cardHtml = document.createElement('div');
+                cardHtml.className = 'card-container';
+                cardHtml.style.animationDelay = `${delay}s`;
+                
+                cardHtml.innerHTML = `
+                    <div class="card" style="--card-color: ${card.color}" 
+                        onclick="openApp('${card.url}', '${card.title}', '${card.emoji}', '${card.color}')">
+                        <div class="icon-box">${card.emoji}</div>
+                        <div class="content">
+                            <div class="title">${card.title}</div>
+                            <div class="desc">${card.desc}</div>
+                        </div>
+                        <div class="arrow">
+                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </div>
+                    </div>
+                `;
+                
+                const cardEl = cardHtml.querySelector('.card');
+                
+                // Tilt Event Listeners
+                cardEl.addEventListener('mousemove', (e) => handleTilt(e, cardEl));
+                cardEl.addEventListener('touchmove', (e) => handleTilt(e, cardEl));
+                cardEl.addEventListener('mouseleave', () => resetTilt(cardEl));
+                cardEl.addEventListener('touchend', () => resetTilt(cardEl));
+
+                cardsWrapper.appendChild(cardHtml);
+            });
+        }
+
+        function renderSettings() {
+            document.getElementById('input-main-title').value = config.mainTitle;
+            document.getElementById('input-sub-title').value = config.subTitle;
+            
+            const list = document.getElementById('card-settings-list');
+            list.innerHTML = '';
+            
+            config.cards.forEach((card, index) => {
+                const block = document.createElement('div');
+                block.className = 'card-edit-block';
+                block.innerHTML = `
+                    <div class="card-edit-header">Button ${index + 1}</div>
+                    <div class="form-group">
+                        <label class="form-label">Title</label>
+                        <input type="text" class="form-input inp-title" value="${card.title}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-input inp-desc" value="${card.desc}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">URL (https://...)</label>
+                        <input type="text" class="form-input inp-url" value="${card.url}">
+                    </div>
+                    <div class="row">
+                        <div class="form-group" style="flex:1">
+                            <label class="form-label">Emoji</label>
+                            <input type="text" class="form-input inp-emoji" value="${card.emoji}">
+                        </div>
+                        <div class="form-group" style="flex:1">
+                            <label class="form-label">Color (Hex)</label>
+                            <input type="text" class="form-input inp-color" value="${card.color}">
+                        </div>
+                    </div>
+                `;
+                list.appendChild(block);
+            });
+        }
+
+        // Logic
+        function handleTilt(e, card) {
+            const rect = card.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const rotateX = ((y - centerY) / centerY) * -12; 
+            const rotateY = ((x - centerX) / centerX) * 12;
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+        }
+
+        function resetTilt(card) {
+            card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+        }
+
+        function openApp(url, title, emoji, color) {
+            if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
+            
+            splashEmoji.innerText = emoji;
+            splashTitle.innerText = title;
+            splashTitle.style.color = color;
+            splashTitle.style.textShadow = `0 0 25px ${color}`;
+            
+            splashScreen.classList.add('active');
+            dashboard.style.transform = 'scale(0.85)';
+            dashboard.style.opacity = '0';
+
+            setTimeout(() => {
+                iframe.src = url;
+                appContainer.classList.add('active');
+                splashScreen.classList.remove('active');
+                tg.BackButton.show();
+                tg.BackButton.onClick(closeApp);
+            }, 1500);
+        }
+
+        function closeApp() {
+            appContainer.classList.remove('active');
+            dashboard.style.transform = 'scale(1)';
+            dashboard.style.opacity = '1';
+            setTimeout(() => { iframe.src = ''; }, 400);
+            if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+            tg.BackButton.hide();
+            tg.BackButton.offClick(closeApp);
+        }
+
+        // Settings Logic
+        function openSettings() {
+            renderSettings();
+            settingsModal.classList.add('active');
+        }
+
+        function closeSettings() {
+            settingsModal.classList.remove('active');
+        }
+
+        function saveConfig() {
+            const newConfig = {
+                mainTitle: document.getElementById('input-main-title').value,
+                subTitle: document.getElementById('input-sub-title').value,
+                cards: []
+            };
+
+            const blocks = document.querySelectorAll('.card-edit-block');
+            blocks.forEach(block => {
+                newConfig.cards.push({
+                    title: block.querySelector('.inp-title').value,
+                    desc: block.querySelector('.inp-desc').value,
+                    url: block.querySelector('.inp-url').value,
+                    emoji: block.querySelector('.inp-emoji').value,
+                    color: block.querySelector('.inp-color').value,
+                });
+            });
+
+            config = newConfig;
+            localStorage.setItem('tetraConfig', JSON.stringify(config));
+            renderDashboard();
+            closeSettings();
+        }
+
+        function resetConfig() {
+            if(confirm('Reset all settings to default?')) {
+                config = defaultConfig;
+                localStorage.removeItem('tetraConfig');
+                renderDashboard();
+                closeSettings();
+            }
+        }
+
+        // Init
+        renderDashboard();
+    </script>
+</body>
+</html>
