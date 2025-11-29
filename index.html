@@ -159,12 +159,8 @@
         </header>
         <div class="relative flex-1 overflow-y-auto p-6 text-gray-300">
             <div id="module-color" class="absolute inset-0"></div>
-            <div class="relative z-10 p-4 border border-white/10 rounded-xl glass-panel text-center">
-                <p class="text-2xl font-semibold mb-2">Simulated App Content</p>
-                <p class="text-sm">This is where the actual content for <span class="text-indigo-400 font-medium" id="module-app-id"></span> module would be loaded. Since this is a single HTML file, this view simulates the destination page, allowing you to easily return to the hub.</p>
-                <div class="mt-4 p-3 bg-white/5 rounded-lg text-xs">
-                    <p class="font-mono" id="module-target-url"></p>
-                </div>
+            <div id="module-content" class="relative z-10">
+
             </div>
             
             <div class="h-40"></div>
@@ -232,28 +228,63 @@
             clearTimeout(navigationTimeout); 
             
             navigationTimeout = setTimeout(() => { 
-                if (app.url.startsWith('http') || app.url === '#') {
-
-                    window.location.href = app.url;
-                } else if (app.url.startsWith('#') && app.url.length > 1) {
-
+                if (app.url !== '#') {
                     openModuleView(app);
                 } else {
-
-                    window.location.href = app.url;
+                    closeTransition(); 
                 }
             }, 1500);
         }
 
         function openModuleView(app) {
             const moduleView = document.getElementById('module-view');
+            const moduleContent = document.getElementById('module-content');
             
 
             document.getElementById('module-title').innerText = app.title;
             document.getElementById('module-emoji').innerText = app.emoji;
-            document.getElementById('module-app-id').innerText = app.title;
-            document.getElementById('module-target-url').innerText = `Target URL: ${app.url}`;
             document.getElementById('module-color').className = `absolute inset-0 bg-gradient-to-br ${app.colorStart} ${app.colorEnd} opacity-10`;
+
+            const isExternal = app.url.startsWith('http');
+
+            if (isExternal) {
+
+                moduleContent.innerHTML = `
+                    <div class="glass-panel p-6 rounded-xl border border-white/10 text-center mt-20">
+                        <i class="fas fa-exclamation-triangle text-4xl text-yellow-400 mb-4"></i>
+                        <p class="text-xl font-bold mb-2 text-white">External Navigation Alert</p>
+                        <p class="text-sm text-gray-400">You are about to leave the TetraHub application and navigate to an external website.</p>
+                        
+                        <div class="mt-4 p-3 bg-white/5 rounded-lg text-xs break-all">
+                            <p class="font-mono text-blue-300">${app.url}</p>
+                        </div>
+
+                        <button onclick="window.location.href='${app.url}'" 
+                            class="w-full mt-6 bg-gradient-to-r ${app.colorStart} ${app.colorEnd} text-white font-bold py-3 rounded-lg shadow-lg active:scale-[0.98] transition">
+                            <i class="fas fa-external-link-alt mr-2"></i> Proceed to External Site
+                        </button>
+                    </div>
+                `;
+            } else {
+
+                moduleContent.innerHTML = `
+                    <div class="p-4 border border-white/10 rounded-xl glass-panel text-center">
+                        <p class="text-2xl font-semibold mb-2">Simulated App Content</p>
+                        <p class="text-sm">This is where the actual content for <span class="text-indigo-400 font-medium">${app.title}</span> module would be loaded.</p>
+                        <div class="mt-4 p-3 bg-white/5 rounded-lg text-xs">
+                            <p class="font-mono text-gray-400">Internal Target: ${app.url}</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 p-4 border border-white/10 rounded-xl glass-panel">
+                        <h3 class="font-bold mb-3 text-white/90">Module Features</h3>
+                        <ul class="space-y-2 text-sm text-gray-400">
+                            <li class="flex items-center"><i class="fas fa-check-circle text-green-400 mr-2"></i> Real-time data sync</li>
+                            <li class="flex items-center"><i class="fas fa-check-circle text-green-400 mr-2"></i> High security level</li>
+                            <li class="flex items-center"><i class="fas fa-check-circle text-green-400 mr-2"></i> Customizable settings</li>
+                        </ul>
+                    </div>
+                `;
+            }
 
 
             document.getElementById('app').style.display = 'none';
@@ -354,7 +385,6 @@
         }
 
         function resetDefaults() {
-
             apps = JSON.parse(JSON.stringify(defaultApps));
             localStorage.setItem('tetraHubApps', JSON.stringify(apps));
             localStorage.removeItem('tetraHubProfileUrl');
